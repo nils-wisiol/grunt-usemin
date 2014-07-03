@@ -408,6 +408,12 @@ describe('FileProcessor', function () {
       assert.equal(replaced, '<meta name="foo" content="' + filemapping['app/image.png'] + '">');
     });
 
+    it('should replace references with no regard to query parameters', function () {
+      var content = '<img src="image.png?query=foo">';
+      var replaced = fp.replaceWithRevved(content, ['app']);
+      assert.equal(replaced, '<img src="' + filemapping['app/image.png'] + '?query=foo">');
+    });
+
   });
 
   describe('css type', function () {
@@ -456,6 +462,16 @@ describe('FileProcessor', function () {
 
       });
 
+      it('should ignore query parameters', function () {
+        var contentQueryParams = '.myclass {\nbackground: url("/images/test.png") no-repeat center center;\nbackground: url("/images/misc/test.png?questionmark=?") no-repeat center center;\nbackground: url("//images/foo.png?foo=bar") no-repeat center center;\nfilter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src="images/pic.png?foo=bar&bar=foo",sizingMethod="scale");}';
+        var changed = cp.replaceWithRevved(contentQueryParams, ['foo']);
+
+        assert.ok(changed.match(/\/images\/pic\.23012\.png\?foo=bar&bar=foo/));
+        assert.ok(changed.match(/\/images\/misc\/test\.23012\.png\?questionmark=\?/));
+        assert.ok(changed.match(/\/\/images\/foo\.23012\.png\?foo=bar/));
+
+      });
+
     });
 
     describe('relative path', function () {
@@ -489,6 +505,15 @@ describe('FileProcessor', function () {
         assert.ok(changed.match(/\"\.\.\/images\/misc\/test\.23012\.png/));
         assert.ok(changed.match(/\"images\/foo\.23012\.png/));
 
+      });
+
+      it('should ignore query parameters in urls', function () {
+        var contentQueryParams = '.myclass {\nbackground: url("images/test.png?questionmark=?") no-repeat center center;\nbackground: url("../images/misc/test.png?foo=bar") no-repeat center center;\nbackground: url("images/foo.png?version=1.3.0") no-repeat center center;}';
+        var changed = cp.replaceWithRevved(contentQueryParams, ['build']);
+
+        assert.ok(changed.match(/\"images\/test\.23012\.png\?questionmark=\?/));
+        assert.ok(changed.match(/\"\.\.\/images\/misc\/test\.23012\.png\?foo=bar/));
+        assert.ok(changed.match(/\"images\/foo\.23012\.png\?version=1.3.0/));
       });
     });
 
@@ -540,6 +565,14 @@ describe('FileProcessor', function () {
         assert.ok(changed.match(/\/styles\/fonts\/icons\.12345\.woff/));
         assert.ok(changed.match(/\/styles\/fonts\/icons\.12345\.ttf/));
         assert.ok(changed.match(/\/styles\/fonts\/icons\.12345\.svg/));
+      });
+
+      it('should ignore query parameters', function () {
+        var contentQueryParams = '@font-face {\nfont-family:"icons";\nsrc:url("/styles/fonts/icons.eot?font=cool");\nsrc:url("/styles/fonts/icons.eot#fragment") format("embedded-opentype"),\nurl("/styles/fonts/icons.woff?query=true") format("woff"),\nurl("/styles/fonts/icons.ttf") format("truetype"),\nurl("/styles/fonts/icons.svg#icons") format("svg");\nfont-weight:normal;\nfont-style:normal;\n}';
+        var changed = cp.replaceWithRevved(contentQueryParams, ['build']);
+
+        assert.ok(changed.match(/\/styles\/fonts\/icons\.12345\.eot\?font=cool/));
+        assert.ok(changed.match(/\/styles\/fonts\/icons\.12345\.woff\?query=true/));
       });
 
     });
